@@ -25,6 +25,7 @@
     "jazzicon": "^1.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.4",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
