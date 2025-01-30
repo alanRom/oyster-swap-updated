@@ -3,12 +3,10 @@ import { Button, Card, Popover } from "antd";
 import { TradeEntry } from "./trade";
 import { AddToLiquidity } from "./pool/add";
 import { PoolAccounts } from "./pool/view";
-import { useWallet } from "../utils/wallet";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { AccountInfo } from "./accountInfo";
-import { Settings } from "./settings";
-import { SettingOutlined } from "@ant-design/icons";
 
-export const ExchangeView = (props: {}) => {
+export const ExchangeView = () => {
   const { connected, wallet } = useWallet();
   const tabStyle: React.CSSProperties = { width: 120 };
   const tabList = [
@@ -60,7 +58,7 @@ export const ExchangeView = (props: {}) => {
             <Button
               type="text"
               size="large"
-              onClick={connected ? wallet.disconnect : wallet.connect}
+              onClick={connected ? wallet?.adapter.disconnect : wallet?.adapter.connect}
               style={{ color: "#2abdd2" }}
             >
               Connect
@@ -74,7 +72,7 @@ export const ExchangeView = (props: {}) => {
             ></Popover>
           )}
         </div>
-        {
+        {/* {
           <Popover
             placement="topRight"
             title="Settings"
@@ -88,7 +86,7 @@ export const ExchangeView = (props: {}) => {
               icon={<SettingOutlined />}
             />
           </Popover>
-        }
+        } */}
       </div>
     </div>
   );
@@ -98,7 +96,7 @@ export const ExchangeView = (props: {}) => {
       {TopBar}
       <Card
         className="exchange-card"
-        headStyle={{ padding: 0 }}
+        styles={{header: { padding: 0 }}}
         tabList={tabList}
         tabProps={{
           tabBarGutter: 0,

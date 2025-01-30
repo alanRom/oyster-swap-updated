@@ -1,13 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "antd";
 import { getTokenName, formatTokenAmount, convert } from "../../utils/utils";
 import { PieChart, Pie, Cell } from "recharts";
 import { useMint, useAccount } from "../../utils/accounts";
 import {
-  ENDPOINTS,
-  useConnection,
-  useConnectionConfig,
+  ENDPOINTS
 } from "../../utils/connection";
+import { useConnectionConfig} from '../../utils/solana-wallet'
+import {useConnection} from '@solana/wallet-adapter-react';
 import { PoolInfo } from "../../models";
 import { MARKETS, TOKEN_MINTS, Market } from "@project-serum/serum";
 import { Connection } from "@solana/web3.js";
@@ -61,7 +62,7 @@ const useMidPriceInUSD = (mint: string) => {
     }
 
     (async () => {
-      let market = await Market.load(
+      const market = await Market.load(
         connection,
         marketInfo.address,
         undefined,
@@ -89,7 +90,7 @@ export const SupplyOverview = (props: {
   pool?: PoolInfo;
 }) => {
   const { mintAddress, pool } = props;
-  const connection = useConnection();
+  const {connection} = useConnection();
   const mintA = useMint(mintAddress[0]);
   const mintB = useMint(mintAddress[1]);
   const accountA = useAccount(
@@ -117,7 +118,7 @@ export const SupplyOverview = (props: {
     }
 
     (async () => {
-      let chart = [
+      const chart = [
         {
           name: getTokenName(env, mintAddress[0]),
           value: convert(accountA, mintA, hasBothPrices ? priceA : undefined),

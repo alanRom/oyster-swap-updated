@@ -1,24 +1,24 @@
-import React from "react";
 import { ConfigProvider, Empty } from "antd";
 import { useOwnedPools } from "../../utils/pools";
 import { RemoveLiquidity } from "./remove";
-import { getPoolName } from "../../utils/utils";
+import { bigintToNumber, getPoolName } from "../../utils/utils";
 import { useMint } from "../../utils/accounts";
-import { useConnectionConfig } from "../../utils/connection";
+import { useConnectionConfig } from "../../utils/solana-wallet";
 import { PoolIcon } from "../tokenIcon";
 import { PoolInfo, TokenAccount } from "../../models";
 import { useCurrencyPairState } from "../../utils/currencyPair";
 import "./view.less";
 
+export interface PoolItemProps { pool: PoolInfo; isFeeAccount: boolean; account: TokenAccount }
 const PoolItem = (props: {
-  item: { pool: PoolInfo; isFeeAccount: boolean; account: TokenAccount };
+  item: PoolItemProps;
 }) => {
   const { env } = useConnectionConfig();
   const { A, B } = useCurrencyPairState();
   const item = props.item;
   const mint = useMint(item.account.info.mint.toBase58());
   const amount =
-    item.account.info.amount.toNumber() / Math.pow(10, mint?.decimals || 0);
+    bigintToNumber(item.account.info.amount) / Math.pow(10, mint?.decimals || 0);
 
   if (!amount) {
     return null;
@@ -72,7 +72,7 @@ export const PoolAccounts = () => {
       >
         <div className="pools-grid">
           {pools.map((p) => (
-            <PoolItem key={p?.account.pubkey.toBase58()} item={p as any} />
+            <PoolItem key={p?.account.pubkey.toBase58()} item={p as PoolItemProps} />
           ))}
         </div>
       </ConfigProvider>

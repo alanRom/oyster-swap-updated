@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card, Select } from "antd";
 import { NumericInput } from "../numericInput";
 import "./add.less";
@@ -30,7 +30,7 @@ const FeeInput = (props: {
           borderColor: "transparent",
           outline: "transpaernt",
         }}
-        onChange={(x: any) => {
+        onChange={(x: string) => {
           setValue(x);
 
           const val = parseFloat(x);
@@ -113,7 +113,7 @@ export const PoolConfigCard = (props: {
             onChange={(val) =>
               props.setOptions({
                 ...props.options,
-                curveType: parseInt(val) as any,
+                curveType: parseInt(val) as 0|1 ,
               })
             }
           >

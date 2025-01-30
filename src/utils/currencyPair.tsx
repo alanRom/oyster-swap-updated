@@ -1,15 +1,15 @@
 import React, { useCallback, useContext, useEffect, useState } from "react";
 import { calculateDependentAmount, usePoolForBasket } from "./pools";
 import { useMint, useAccountByMint } from "./accounts";
-import { MintInfo } from "@solana/spl-token";
-import { useConnection } from "./connection";
+import { Mint } from "@solana/spl-token";
+import { useConnection } from "@solana/wallet-adapter-react";
 import { TokenAccount } from "../models";
 import { convert } from "./utils";
 
 export interface CurrencyContextState {
   mintAddress: string;
   account?: TokenAccount;
-  mint?: MintInfo;
+  mint?: Mint;
   amount: string;
   setAmount: (val: string) => void;
   setMint: (mintAddress: string) => void;
@@ -27,8 +27,8 @@ const CurrencyPairContext = React.createContext<CurrencyPairContextState | null>
   null
 );
 
-export function CurrencyPairProvider({ children = null as any }) {
-  const connection = useConnection();
+export function CurrencyPairProvider({ children = null }) {
+  const {connection} = useConnection();
   const [amountA, setAmountA] = useState("");
   const [amountB, setAmountB] = useState("");
   const [mintAddressA, setMintAddressA] = useState("");
@@ -83,7 +83,7 @@ export function CurrencyPairProvider({ children = null as any }) {
     calculateDependent();
   }, [amountB, amountA, lastTypedAccount, calculateDependent]);
 
-  const convertAmount = (amount: string, mint?: MintInfo) => {
+  const convertAmount = (amount: string, mint?: Mint) => {
     return parseFloat(amount) * Math.pow(10, mint?.decimals || 0);
   };
 

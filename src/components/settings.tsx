@@ -1,15 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Button, Select } from "antd";
-import {
-  ENDPOINTS,
-  useConnectionConfig,
-  useSlippageConfig,
-} from "../utils/connection";
-import { useWallet, WALLET_PROVIDERS } from "../utils/wallet";
+import { useConnection } from "@solana/wallet-adapter-react";
 import { NumericInput } from "./numericInput";
+import { AppConfigurationContext, WALLET_ENDPOINTS} from "../utils/solana-wallet";
 
-const Slippage = (props: {}) => {
-  const { slippage, setSlippage } = useSlippageConfig();
+const Slippage = () => {
+  const { slippage, setSlippage } = useContext(AppConfigurationContext);
   const slippagePct = slippage * 100;
   const [value, setValue] = useState(slippagePct.toString());
 
@@ -54,7 +50,7 @@ const Slippage = (props: {}) => {
             borderColor: "transparent",
             outline: "transpaernt",
           }}
-          onChange={(x: any) => {
+          onChange={(x: string) => {
             setValue(x);
             const newValue = parseFloat(x) / 100.0;
             if (Number.isFinite(newValue)) {
@@ -68,9 +64,14 @@ const Slippage = (props: {}) => {
   );
 };
 
-export const Settings = () => {
-  const { providerUrl, setProvider } = useWallet();
-  const { endpoint, setEndpoint } = useConnectionConfig();
+export const Settings = (props: {setNetwork: (network: string) => void}) => {
+  // const { providerUrl, setProvider } = useWallet();
+  const {connection} = useConnection();
+  const providerUrl = connection.rpcEndpoint;
+  const {setNetwork} = props;
+  // function setProvider(value: unknown, option: DefaultOptionType ): void {
+  //   throw new Error("Function not implemented.");
+  // }
 
   return (
     <>
@@ -84,18 +85,18 @@ export const Settings = () => {
       <div style={{ display: "grid" }}>
         Network:{" "}
         <Select
-          onSelect={setEndpoint}
-          value={endpoint}
+          onSelect={setNetwork}
+          value={providerUrl}
           style={{ marginRight: 8 }}
         >
-          {ENDPOINTS.map(({ name, endpoint }) => (
-            <Select.Option value={endpoint} key={endpoint}>
+          {WALLET_ENDPOINTS.map(({ name, endpoint }) => (
+            <Select.Option displayName={name.valueOf()} key={endpoint} value={endpoint} >
               {name}
             </Select.Option>
           ))}
         </Select>
       </div>
-      <div style={{ display: "grid" }}>
+      {/* <div style={{ display: "grid" }}>
         Wallet:{" "}
         <Select onSelect={setProvider} value={providerUrl}>
           {WALLET_PROVIDERS.map(({ name, url }) => (
@@ -104,7 +105,7 @@ export const Settings = () => {
             </Select.Option>
           ))}
         </Select>
-      </div>
+      </div> */}
     </>
   );
 };

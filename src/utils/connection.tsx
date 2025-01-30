@@ -1,170 +1,158 @@
-import { useLocalStorageState } from "./utils";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Account,
-  clusterApiUrl,
-  Connection,
+  Keypair,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import React, { useContext, useEffect, useMemo } from "react";
-import { setProgramIds } from "./ids";
 import { notify } from "./notifications";
+import { Wallet, WalletContextState } from "@solana/wallet-adapter-react";
 
 export type ENV = "mainnet-beta" | "testnet" | "devnet" | "localnet";
+
 
 export const ENDPOINTS = [
   {
     name: "mainnet-beta" as ENV,
-    endpoint: "https://solana-api.projectserum.com/",
-  },
-  { name: "testnet" as ENV, endpoint: clusterApiUrl("testnet") },
-  { name: "devnet" as ENV, endpoint: clusterApiUrl("devnet") },
+    endpoint: "https://solana-api.projectserum.com",
+    },
+    { name: "testnet" as ENV, endpoint: "https://api.testnet.solana.com" },
+    { name: "devnet" as ENV, endpoint: "https://api.devnet.solana.com" },
   { name: "localnet" as ENV, endpoint: "http://127.0.0.1:8899" },
 ];
 
-const DEFAULT = ENDPOINTS[0].endpoint;
-const DEFAULT_SLIPPAGE = 0.25;
+// const DEFAULT = ENDPOINTS[2].endpoint;
+// const DEFAULT_SLIPPAGE = 0.25;
 
-interface ConnectionConfig {
-  connection: Connection;
-  sendConnection: Connection;
-  endpoint: string;
-  slippage: number;
-  setSlippage: (val: number) => void;
-  env: ENV;
-  setEndpoint: (val: string) => void;
-}
+// interface ConnectionConfig {
+//   connection: Connection;
+//   sendConnection: Connection;
+//   endpoint: string;
+//   slippage: number;
+//   setSlippage: (val: number) => void;
+//   env: ENV;
+//   setEndpoint: (val: string) => void;
+// }
 
-const ConnectionContext = React.createContext<ConnectionConfig>({
-  endpoint: DEFAULT,
-  setEndpoint: () => {},
-  slippage: DEFAULT_SLIPPAGE,
-  setSlippage: (val: number) => {},
-  connection: new Connection(DEFAULT, "recent"),
-  sendConnection: new Connection(DEFAULT, "recent"),
-  env: ENDPOINTS[0].name,
-});
+// const ConnectionContext = React.createContext<ConnectionConfig>({
+//   endpoint: DEFAULT,
+//   setEndpoint: () => {},
+//   slippage: DEFAULT_SLIPPAGE,
+//   setSlippage: (val: number) => {},
+//   connection: new Connection(DEFAULT, "recent"),
+//   sendConnection: new Connection(DEFAULT, "recent"),
+//   env: ENDPOINTS[0].name,
+// });
 
-export function ConnectionProvider({ children = undefined as any }) {
-  const [endpoint, setEndpoint] = useLocalStorageState(
-    "connectionEndpts",
-    ENDPOINTS[0].endpoint
-  );
+// export function ConnectionProvider({ children = undefined as any }) {
+//   const [endpoint, setEndpoint] = useLocalStorageState(
+//     "connectionEndpts",
+//     ENDPOINTS[0].endpoint
+//   );
 
-  const [slippage, setSlippage] = useLocalStorageState(
-    "slippage",
-    DEFAULT_SLIPPAGE.toString()
-  );
+//   const [slippage, setSlippage] = useLocalStorageState(
+//     "slippage",
+//     DEFAULT_SLIPPAGE.toString()
+//   );
 
-  const connection = useMemo(() => new Connection(endpoint, "recent"), [
-    endpoint,
-  ]);
-  const sendConnection = useMemo(() => new Connection(endpoint, "recent"), [
-    endpoint,
-  ]);
+//   const connection = useMemo(() => new Connection(endpoint, "recent"), [
+//     endpoint,
+//   ]);
+//   const sendConnection = useMemo(() => new Connection(endpoint, "recent"), [
+//     endpoint,
+//   ]);
 
-  const env =
-    ENDPOINTS.find((end) => end.endpoint === endpoint)?.name ||
-    ENDPOINTS[0].name;
+//   const env =
+//     ENDPOINTS.find((end) => end.endpoint === endpoint)?.name ||
+//     ENDPOINTS[0].name;
 
-  setProgramIds(env);
+//   setProgramIds(env);
 
-  // The websocket library solana/web3.js uses closes its websocket connection when the subscription list
-  // is empty after opening its first time, preventing subsequent subscriptions from receiving responses.
-  // This is a hack to prevent the list from every getting empty
-  useEffect(() => {
-    const id = connection.onAccountChange(new Account().publicKey, () => {});
-    return () => {
-      connection.removeAccountChangeListener(id);
-    };
-  }, [connection]);
+//   // The websocket library solana/web3.js uses closes its websocket connection when the subscription list
+//   // is empty after opening its first time, preventing subsequent subscriptions from receiving responses.
+//   // This is a hack to prevent the list from every getting empty
+//   useEffect(() => {
+//     const id = connection.onAccountChange(new Account().publicKey, () => {});
+//     return () => {
+//       connection.removeAccountChangeListener(id);
+//     };
+//   }, [connection]);
 
-  useEffect(() => {
-    const id = connection.onSlotChange(() => null);
-    return () => {
-      connection.removeSlotChangeListener(id);
-    };
-  }, [connection]);
+//   useEffect(() => {
+//     const id = connection.onSlotChange(() => null);
+//     return () => {
+//       connection.removeSlotChangeListener(id);
+//     };
+//   }, [connection]);
 
-  useEffect(() => {
-    const id = sendConnection.onAccountChange(
-      new Account().publicKey,
-      () => {}
-    );
-    return () => {
-      sendConnection.removeAccountChangeListener(id);
-    };
-  }, [sendConnection]);
+//   useEffect(() => {
+//     const id = sendConnection.onAccountChange(
+//       new Account().publicKey,
+//       () => {}
+//     );
+//     return () => {
+//       sendConnection.removeAccountChangeListener(id);
+//     };
+//   }, [sendConnection]);
 
-  useEffect(() => {
-    const id = sendConnection.onSlotChange(() => null);
-    return () => {
-      sendConnection.removeSlotChangeListener(id);
-    };
-  }, [sendConnection]);
+//   useEffect(() => {
+//     const id = sendConnection.onSlotChange(() => null);
+//     return () => {
+//       sendConnection.removeSlotChangeListener(id);
+//     };
+//   }, [sendConnection]);
 
-  return (
-    <ConnectionContext.Provider
-      value={{
-        endpoint,
-        setEndpoint,
-        slippage: parseFloat(slippage),
-        setSlippage: (val) => setSlippage(val.toString()),
-        connection,
-        sendConnection,
-        env,
-      }}
-    >
-      {children}
-    </ConnectionContext.Provider>
-  );
-}
+//   return (
+//     <ConnectionContext.Provider
+//       value={{
+//         endpoint,
+//         setEndpoint,
+//         slippage: parseFloat(slippage),
+//         setSlippage: (val) => setSlippage(val.toString()),
+//         connection,
+//         sendConnection,
+//         env,
+//       }}
+//     >
+//       {children}
+//     </ConnectionContext.Provider>
+//   );
+// }
 
-export function useConnection() {
-  return useContext(ConnectionContext).connection as Connection;
-}
+// export function useConnection() {
+//   return useContext(ConnectionContext).connection as Connection;
+// }
 
-export function useSendConnection() {
-  return useContext(ConnectionContext)?.sendConnection;
-}
+// export function useSendConnection() {
+//   return useContext(ConnectionContext)?.sendConnection;
+// }
 
-export function useConnectionConfig() {
-  const context = useContext(ConnectionContext);
-  return {
-    endpoint: context.endpoint,
-    setEndpoint: context.setEndpoint,
-    env: context.env,
-  };
-}
-
-export function useSlippageConfig() {
-  const { slippage, setSlippage } = useContext(ConnectionContext);
-  return { slippage, setSlippage };
-}
 
 export const sendTransaction = async (
   connection: any,
-  wallet: any,
+  wallet: Wallet,
+  walletContext: WalletContextState,
   instructions: TransactionInstruction[],
-  signers: Account[],
+  signers: Keypair[],
   awaitConfirmation = true
 ) => {
   let transaction = new Transaction();
+  const {signTransaction} = walletContext;
   instructions.forEach((instruction) => transaction.add(instruction));
   transaction.recentBlockhash = (
     await connection.getRecentBlockhash("max")
   ).blockhash;
   transaction.setSigners(
     // fee payied by the wallet owner
-    wallet.publicKey,
+    wallet.adapter.publicKey!,
     ...signers.map((s) => s.publicKey)
   );
   if (signers.length > 0) {
     transaction.partialSign(...signers);
   }
-  transaction = await wallet.signTransaction(transaction);
+  transaction = await signTransaction!(transaction);
   const rawTransaction = transaction.serialize();
-  let options = {
+  const options = {
     skipPreflight: true,
     commitment: "singleGossip",
   };

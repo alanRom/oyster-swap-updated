@@ -1,21 +1,29 @@
-import { PublicKey } from "@solana/web3.js";
+import {  PublicKey } from "@solana/web3.js";
 
 export const WRAPPED_SOL_MINT = new PublicKey(
   "So11111111111111111111111111111111111111112"
 );
-let TOKEN_PROGRAM_ID = new PublicKey(
+const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
 
 let SWAP_PROGRAM_ID: PublicKey;
 let SWAP_PROGRAM_LEGACY_IDS: PublicKey[];
 
-export const SWAP_HOST_FEE_ADDRESS = process.env.REACT_APP_SWAP_HOST_FEE_ADDRESS
-  ? new PublicKey(`${process.env.REACT_APP_SWAP_HOST_FEE_ADDRESS}`)
+
+export const SWAP_HOST_FEE_ADDRESS = import.meta.env.VITE_SWAP_HOST_FEE_ADDRESS
+  ? new PublicKey(`${ import.meta.env.VITE_SWAP_HOST_FEE_ADDRESS}`)
   : undefined;
-export const SWAP_PROGRAM_OWNER_FEE_ADDRESS = new PublicKey(
-  "HfoTxFR1Tm6kGmWgYWD6J7YHVy1UwqSULUGVLXkJqaKN"
-);
+
+export const SWAP_PROGRAM_OWNER_FEE_ADDRESS = import.meta.env.VITE_SWAP_PROGRAM_OWNER_FEE_ADDRESS
+  ? new PublicKey(`${ import.meta.env.VITE_SWAP_PROGRAM_OWNER_FEE_ADDRESS}`)
+  : undefined;
+// export const SWAP_PROGRAM_OWNER_FEE_ADDRESS = new PublicKey(
+//   "HfoTxFR1Tm6kGmWgYWD6J7YHVy1UwqSULUGVLXkJqaKN"
+// );
+
+export const TEST_USER_LOCAL_WALLET = import.meta.env.VITE_TEST_USER_LOCAL_WALLET ? new PublicKey(import.meta.env.VITE_TEST_USER_LOCAL_WALLET) : undefined;
+//Keypair.fromSecretKey(new Uint8Array(JSON.parse(import.meta.env.TEST_USER_LOCAL_WALLET) as number[]));
 
 console.debug(`Host address: ${SWAP_HOST_FEE_ADDRESS?.toBase58()}`);
 console.debug(`Owner address: ${SWAP_PROGRAM_OWNER_FEE_ADDRESS?.toBase58()}`);
@@ -42,7 +50,7 @@ export const PROGRAM_IDS = [
   {
     name: "devnet",
     swap: () => ({
-      current: new PublicKey("BSfTAcBdqmvX5iE2PW88WFNNp2DHhLUaBKk5WrnxVkcJ"),
+      current: new PublicKey("SwapsVeCiPHMUAtzQWZw7RjsKjgCjhwU55QGu4U1Szw"),
       legacy: [
         new PublicKey("H1E1G7eD5Rrcy43xvDxXCsjkRggz7MWNMLGJ8YNzJ8PM"),
         new PublicKey("CMoteLxSPVPoc7Drcggf3QPg3ue8WPpxYyZTg77UGqHo"),
@@ -53,19 +61,19 @@ export const PROGRAM_IDS = [
   {
     name: "localnet",
     swap: () => ({
-      current: new PublicKey("5rdpyt5iGfr68qt28hkefcFyF4WtyhTwqKDmHSBG8GZx"),
+      current: new PublicKey("SwapsVeCiPHMUAtzQWZw7RjsKjgCjhwU55QGu4U1Szw"),
       legacy: [],
     }),
   },
 ];
 
 export const setProgramIds = (envName: string) => {
-  let instance = PROGRAM_IDS.find((env) => env.name === envName);
+  const instance = PROGRAM_IDS.find((env) => env.name === envName);
   if (!instance) {
     return;
   }
 
-  let swap = instance.swap();
+  const swap = instance.swap();
 
   SWAP_PROGRAM_ID = swap.current;
   SWAP_PROGRAM_LEGACY_IDS = swap.legacy;

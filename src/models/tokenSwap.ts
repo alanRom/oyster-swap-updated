@@ -1,6 +1,9 @@
-import { Numberu64 } from "@solana/spl-token-swap";
 import { PublicKey, Account, TransactionInstruction } from "@solana/web3.js";
 import * as BufferLayout from "buffer-layout";
+import {u64} from '@solana/buffer-layout-utils';
+import {struct, u8, blob} from '@solana/buffer-layout';
+import { SwapInstruction } from "@solana/spl-token-swap";
+import {numberToBigint} from '../utils/utils'
 
 export { TokenSwap } from "@solana/spl-token-swap";
 
@@ -50,180 +53,180 @@ export const TokenSwapLayout: typeof BufferLayout.Structure = BufferLayout.struc
   ]
 );
 
-export const createInitSwapInstruction = (
-  tokenSwapAccount: Account,
-  authority: PublicKey,
-  tokenAccountA: PublicKey,
-  tokenAccountB: PublicKey,
-  tokenPool: PublicKey,
-  feeAccount: PublicKey,
-  tokenAccountPool: PublicKey,
-  tokenProgramId: PublicKey,
-  swapProgramId: PublicKey,
-  nonce: number,
-  curveType: number,
-  tradeFeeNumerator: number,
-  tradeFeeDenominator: number,
-  ownerTradeFeeNumerator: number,
-  ownerTradeFeeDenominator: number,
-  ownerWithdrawFeeNumerator: number,
-  ownerWithdrawFeeDenominator: number
-): TransactionInstruction => {
-  const keys = [
-    { pubkey: tokenSwapAccount.publicKey, isSigner: false, isWritable: true },
-    { pubkey: authority, isSigner: false, isWritable: false },
-    { pubkey: tokenAccountA, isSigner: false, isWritable: false },
-    { pubkey: tokenAccountB, isSigner: false, isWritable: false },
-    { pubkey: tokenPool, isSigner: false, isWritable: true },
-    { pubkey: feeAccount, isSigner: false, isWritable: false },
-    { pubkey: tokenAccountPool, isSigner: false, isWritable: true },
-    { pubkey: tokenProgramId, isSigner: false, isWritable: false },
-  ];
+// export const createInitSwapInstruction = (
+//   tokenSwapAccount: Account,
+//   authority: PublicKey,
+//   tokenAccountA: PublicKey,
+//   tokenAccountB: PublicKey,
+//   tokenPool: PublicKey,
+//   feeAccount: PublicKey,
+//   tokenAccountPool: PublicKey,
+//   tokenProgramId: PublicKey,
+//   swapProgramId: PublicKey,
+//   nonce: number,
+//   curveType: number,
+//   tradeFeeNumerator: number,
+//   tradeFeeDenominator: number,
+//   ownerTradeFeeNumerator: number,
+//   ownerTradeFeeDenominator: number,
+//   ownerWithdrawFeeNumerator: number,
+//   ownerWithdrawFeeDenominator: number
+// ): TransactionInstruction => {
+//   const keys = [
+//     { pubkey: tokenSwapAccount.publicKey, isSigner: false, isWritable: true },
+//     { pubkey: authority, isSigner: false, isWritable: false },
+//     { pubkey: tokenAccountA, isSigner: false, isWritable: false },
+//     { pubkey: tokenAccountB, isSigner: false, isWritable: false },
+//     { pubkey: tokenPool, isSigner: false, isWritable: true },
+//     { pubkey: feeAccount, isSigner: false, isWritable: false },
+//     { pubkey: tokenAccountPool, isSigner: false, isWritable: true },
+//     { pubkey: tokenProgramId, isSigner: false, isWritable: false },
+//   ];
 
-  const commandDataLayout = BufferLayout.struct([
-    BufferLayout.u8("instruction"),
-    BufferLayout.u8("nonce"),
-    BufferLayout.u8("curveType"),
-    BufferLayout.nu64("tradeFeeNumerator"),
-    BufferLayout.nu64("tradeFeeDenominator"),
-    BufferLayout.nu64("ownerTradeFeeNumerator"),
-    BufferLayout.nu64("ownerTradeFeeDenominator"),
-    BufferLayout.nu64("ownerWithdrawFeeNumerator"),
-    BufferLayout.nu64("ownerWithdrawFeeDenominator"),
-    BufferLayout.blob(16, "padding"),
-  ]);
-  let data = Buffer.alloc(1024);
-  {
-    const encodeLength = commandDataLayout.encode(
-      {
-        instruction: 0, // InitializeSwap instruction
-        nonce,
-        curveType,
-        tradeFeeNumerator,
-        tradeFeeDenominator,
-        ownerTradeFeeNumerator,
-        ownerTradeFeeDenominator,
-        ownerWithdrawFeeNumerator,
-        ownerWithdrawFeeDenominator,
-      },
-      data
-    );
-    data = data.slice(0, encodeLength);
-  }
-  return new TransactionInstruction({
-    keys,
-    programId: swapProgramId,
-    data,
-  });
-};
+//   const commandDataLayout = BufferLayout.struct([
+//     BufferLayout.u8("instruction"),
+//     BufferLayout.u8("nonce"),
+//     BufferLayout.u8("curveType"),
+//     BufferLayout.nu64("tradeFeeNumerator"),
+//     BufferLayout.nu64("tradeFeeDenominator"),
+//     BufferLayout.nu64("ownerTradeFeeNumerator"),
+//     BufferLayout.nu64("ownerTradeFeeDenominator"),
+//     BufferLayout.nu64("ownerWithdrawFeeNumerator"),
+//     BufferLayout.nu64("ownerWithdrawFeeDenominator"),
+//     BufferLayout.blob(16, "padding"),
+//   ]);
+//   let data = Buffer.alloc(1024);
+//   {
+//     const encodeLength = commandDataLayout.encode(
+//       {
+//         instruction: 0, // InitializeSwap instruction
+//         nonce,
+//         curveType,
+//         tradeFeeNumerator,
+//         tradeFeeDenominator,
+//         ownerTradeFeeNumerator,
+//         ownerTradeFeeDenominator,
+//         ownerWithdrawFeeNumerator,
+//         ownerWithdrawFeeDenominator,
+//       },
+//       data
+//     );
+//     data = data.slice(0, encodeLength);
+//   }
+//   return new TransactionInstruction({
+//     keys,
+//     programId: swapProgramId,
+//     data,
+//   });
+// };
 
-export const depositInstruction = (
-  tokenSwap: PublicKey,
-  authority: PublicKey,
-  sourceA: PublicKey,
-  sourceB: PublicKey,
-  intoA: PublicKey,
-  intoB: PublicKey,
-  poolToken: PublicKey,
-  poolAccount: PublicKey,
-  swapProgramId: PublicKey,
-  tokenProgramId: PublicKey,
-  poolTokenAmount: number | Numberu64,
-  maximumTokenA: number | Numberu64,
-  maximumTokenB: number | Numberu64
-): TransactionInstruction => {
-  const dataLayout = BufferLayout.struct([
-    BufferLayout.u8("instruction"),
-    uint64("poolTokenAmount"),
-    uint64("maximumTokenA"),
-    uint64("maximumTokenB"),
-  ]);
+// export const depositInstruction = (
+//   tokenSwap: PublicKey,
+//   authority: PublicKey,
+//   sourceA: PublicKey,
+//   sourceB: PublicKey,
+//   intoA: PublicKey,
+//   intoB: PublicKey,
+//   poolToken: PublicKey,
+//   poolAccount: PublicKey,
+//   swapProgramId: PublicKey,
+//   tokenProgramId: PublicKey,
+//   poolTokenAmount: number | Numberu64,
+//   maximumTokenA: number | Numberu64,
+//   maximumTokenB: number | Numberu64
+// ): TransactionInstruction => {
+//   const dataLayout = BufferLayout.struct([
+//     BufferLayout.u8("instruction"),
+//     uint64("poolTokenAmount"),
+//     uint64("maximumTokenA"),
+//     uint64("maximumTokenB"),
+//   ]);
 
-  const data = Buffer.alloc(dataLayout.span);
-  dataLayout.encode(
-    {
-      instruction: 2, // Deposit instruction
-      poolTokenAmount: new Numberu64(poolTokenAmount).toBuffer(),
-      maximumTokenA: new Numberu64(maximumTokenA).toBuffer(),
-      maximumTokenB: new Numberu64(maximumTokenB).toBuffer(),
-    },
-    data
-  );
+//   const data = Buffer.alloc(dataLayout.span);
+//   dataLayout.encode(
+//     {
+//       instruction: 2, // Deposit instruction
+//       poolTokenAmount: u64(poolTokenAmount). .toBuffer(),
+//       maximumTokenA: new Numberu64(maximumTokenA).toBuffer(),
+//       maximumTokenB: new Numberu64(maximumTokenB).toBuffer(),
+//     },
+//     data
+//   );
 
-  const keys = [
-    { pubkey: tokenSwap, isSigner: false, isWritable: false },
-    { pubkey: authority, isSigner: false, isWritable: false },
-    { pubkey: sourceA, isSigner: false, isWritable: true },
-    { pubkey: sourceB, isSigner: false, isWritable: true },
-    { pubkey: intoA, isSigner: false, isWritable: true },
-    { pubkey: intoB, isSigner: false, isWritable: true },
-    { pubkey: poolToken, isSigner: false, isWritable: true },
-    { pubkey: poolAccount, isSigner: false, isWritable: true },
-    { pubkey: tokenProgramId, isSigner: false, isWritable: false },
-  ];
-  return new TransactionInstruction({
-    keys,
-    programId: swapProgramId,
-    data,
-  });
-};
+//   const keys = [
+//     { pubkey: tokenSwap, isSigner: false, isWritable: false },
+//     { pubkey: authority, isSigner: false, isWritable: false },
+//     { pubkey: sourceA, isSigner: false, isWritable: true },
+//     { pubkey: sourceB, isSigner: false, isWritable: true },
+//     { pubkey: intoA, isSigner: false, isWritable: true },
+//     { pubkey: intoB, isSigner: false, isWritable: true },
+//     { pubkey: poolToken, isSigner: false, isWritable: true },
+//     { pubkey: poolAccount, isSigner: false, isWritable: true },
+//     { pubkey: tokenProgramId, isSigner: false, isWritable: false },
+//   ];
+//   return new TransactionInstruction({
+//     keys,
+//     programId: swapProgramId,
+//     data,
+//   });
+// };
 
-export const withdrawInstruction = (
-  tokenSwap: PublicKey,
-  authority: PublicKey,
-  poolMint: PublicKey,
-  feeAccount: PublicKey | undefined,
-  sourcePoolAccount: PublicKey,
-  fromA: PublicKey,
-  fromB: PublicKey,
-  userAccountA: PublicKey,
-  userAccountB: PublicKey,
-  swapProgramId: PublicKey,
-  tokenProgramId: PublicKey,
-  poolTokenAmount: number | Numberu64,
-  minimumTokenA: number | Numberu64,
-  minimumTokenB: number | Numberu64
-): TransactionInstruction => {
-  const dataLayout = BufferLayout.struct([
-    BufferLayout.u8("instruction"),
-    uint64("poolTokenAmount"),
-    uint64("minimumTokenA"),
-    uint64("minimumTokenB"),
-  ]);
+// export const withdrawInstruction = (
+//   tokenSwap: PublicKey,
+//   authority: PublicKey,
+//   poolMint: PublicKey,
+//   feeAccount: PublicKey | undefined,
+//   sourcePoolAccount: PublicKey,
+//   fromA: PublicKey,
+//   fromB: PublicKey,
+//   userAccountA: PublicKey,
+//   userAccountB: PublicKey,
+//   swapProgramId: PublicKey,
+//   tokenProgramId: PublicKey,
+//   poolTokenAmount: number | Numberu64,
+//   minimumTokenA: number | Numberu64,
+//   minimumTokenB: number | Numberu64
+// ): TransactionInstruction => {
+//   const dataLayout = BufferLayout.struct([
+//     BufferLayout.u8("instruction"),
+//     uint64("poolTokenAmount"),
+//     uint64("minimumTokenA"),
+//     uint64("minimumTokenB"),
+//   ]);
 
-  const data = Buffer.alloc(dataLayout.span);
-  dataLayout.encode(
-    {
-      instruction: 3, // Withdraw instruction
-      poolTokenAmount: new Numberu64(poolTokenAmount).toBuffer(),
-      minimumTokenA: new Numberu64(minimumTokenA).toBuffer(),
-      minimumTokenB: new Numberu64(minimumTokenB).toBuffer(),
-    },
-    data
-  );
+//   const data = Buffer.alloc(dataLayout.span);
+//   dataLayout.encode(
+//     {
+//       instruction: 3, // Withdraw instruction
+//       poolTokenAmount: new Numberu64(poolTokenAmount).toBuffer(),
+//       minimumTokenA: new Numberu64(minimumTokenA).toBuffer(),
+//       minimumTokenB: new Numberu64(minimumTokenB).toBuffer(),
+//     },
+//     data
+//   );
 
-  const keys = [
-    { pubkey: tokenSwap, isSigner: false, isWritable: false },
-    { pubkey: authority, isSigner: false, isWritable: false },
-    { pubkey: poolMint, isSigner: false, isWritable: true },
-    { pubkey: sourcePoolAccount, isSigner: false, isWritable: true },
-    { pubkey: fromA, isSigner: false, isWritable: true },
-    { pubkey: fromB, isSigner: false, isWritable: true },
-    { pubkey: userAccountA, isSigner: false, isWritable: true },
-    { pubkey: userAccountB, isSigner: false, isWritable: true },
-  ];
+//   const keys = [
+//     { pubkey: tokenSwap, isSigner: false, isWritable: false },
+//     { pubkey: authority, isSigner: false, isWritable: false },
+//     { pubkey: poolMint, isSigner: false, isWritable: true },
+//     { pubkey: sourcePoolAccount, isSigner: false, isWritable: true },
+//     { pubkey: fromA, isSigner: false, isWritable: true },
+//     { pubkey: fromB, isSigner: false, isWritable: true },
+//     { pubkey: userAccountA, isSigner: false, isWritable: true },
+//     { pubkey: userAccountB, isSigner: false, isWritable: true },
+//   ];
 
-  if (feeAccount) {
-    keys.push({ pubkey: feeAccount, isSigner: false, isWritable: true });
-  }
-  keys.push({ pubkey: tokenProgramId, isSigner: false, isWritable: false });
+//   if (feeAccount) {
+//     keys.push({ pubkey: feeAccount, isSigner: false, isWritable: true });
+//   }
+//   keys.push({ pubkey: tokenProgramId, isSigner: false, isWritable: false });
 
-  return new TransactionInstruction({
-    keys,
-    programId: swapProgramId,
-    data,
-  });
-};
+//   return new TransactionInstruction({
+//     keys,
+//     programId: swapProgramId,
+//     data,
+//   });
+// };
 
 export const swapInstruction = (
   tokenSwap: PublicKey,
@@ -236,15 +239,17 @@ export const swapInstruction = (
   feeAccount: PublicKey,
   swapProgramId: PublicKey,
   tokenProgramId: PublicKey,
-  amountIn: number | Numberu64,
-  minimumAmountOut: number | Numberu64,
+  amountIn: number | bigint,
+  minimumAmountOut: number | bigint,
   programOwner?: PublicKey
 ): TransactionInstruction => {
-  const dataLayout = BufferLayout.struct([
-    BufferLayout.u8("instruction"),
-    uint64("amountIn"),
-    uint64("minimumAmountOut"),
+  const dataLayout = struct<SwapInstruction>([
+    u8('instruction'),
+    u64('amountIn'),
+    u64('minimumAmountOut'),
   ]);
+
+  
 
   const keys = [
     { pubkey: tokenSwap, isSigner: false, isWritable: false },
@@ -267,10 +272,10 @@ export const swapInstruction = (
   dataLayout.encode(
     {
       instruction: 1, // Swap instruction
-      amountIn: new Numberu64(amountIn).toBuffer(),
-      minimumAmountOut: new Numberu64(minimumAmountOut).toBuffer(),
+      amountIn: numberToBigint(amountIn),
+      minimumAmountOut: numberToBigint(minimumAmountOut),
     },
-    data
+    data,
   );
 
   return new TransactionInstruction({

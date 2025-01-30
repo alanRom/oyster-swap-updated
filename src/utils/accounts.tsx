@@ -1,14 +1,25 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useContext, useEffect, useState } from "react";
-import { useConnection } from "./connection";
-import { useWallet } from "./wallet";
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { AccountInfo, Connection, PublicKey } from "@solana/web3.js";
 import { programIds, SWAP_HOST_FEE_ADDRESS, WRAPPED_SOL_MINT } from "./ids";
-import { AccountLayout, u64, MintInfo, MintLayout } from "@solana/spl-token";
+import { AccountLayout,  Mint, MintLayout, unpackMint, unpackAccount } from "@solana/spl-token";
 import { usePools } from "./pools";
 import { TokenAccount, PoolInfo } from "./../models";
 import { notify } from "./notifications";
 
-const AccountsContext = React.createContext<any>(null);
+
+export interface AccountContextResults {
+    userAccounts: TokenAccount[],
+    pools: PoolInfo[],
+    nativeAccount: AccountInfo<Buffer> | undefined,
+}
+
+const AccountsContext = React.createContext<AccountContextResults>({
+  userAccounts: [],
+  pools: [],
+  nativeAccount: undefined
+});
 
 class AccountUpdateEvent extends Event {
   static type = "AccountUpdate";
@@ -27,7 +38,7 @@ class EventEmitter extends EventTarget {
 
 const accountEmitter = new EventEmitter();
 
-const mintCache = new Map<string, Promise<MintInfo>>();
+const mintCache = new Map<string, Promise<Mint>>();
 const pendingAccountCalls = new Map<string, Promise<TokenAccount>>();
 const accountsCache = new Map<string, TokenAccount>();
 
@@ -37,9 +48,9 @@ const getAccountInfo = async (connection: Connection, pubKey: PublicKey) => {
     throw new Error("Failed to find mint account");
   }
 
-  const buffer = Buffer.from(info.data);
+  // const buffer = Buffer.from(info.data);
 
-  const data = deserializeAccount(buffer);
+  const data = unpackAccount(pubKey, info);// deserializeAccount(buffer);
 
   const details = {
     pubkey: pubKey,
@@ -58,9 +69,9 @@ const getMintInfo = async (connection: Connection, pubKey: PublicKey) => {
     throw new Error("Failed to find mint account");
   }
 
-  const data = Buffer.from(info.data);
+  // const data = Buffer.from(info.data);
 
-  return deserializeMint(data);
+  return unpackMint(pubKey, info);//  deserializeMint(data);
 };
 
 export const cache = {
@@ -74,7 +85,7 @@ export const cache = {
 
     const address = id.toBase58();
 
-    let account = accountsCache.get(address);
+    const account = accountsCache.get(address);
     if (account) {
       return account;
     }
@@ -101,12 +112,12 @@ export const cache = {
       id = pubKey;
     }
 
-    let mint = mintCache.get(id.toBase58());
+    const mint = mintCache.get(id.toBase58());
     if (mint) {
       return mint;
     }
 
-    let query = getMintInfo(connection, id);
+    const query = getMintInfo(connection, id);
 
     mintCache.set(id.toBase58(), query as any);
 
@@ -125,10 +136,10 @@ export const getCachedAccount = (
 };
 
 function wrapNativeAccount(
-  pubkey: PublicKey,
+  pubkey: PublicKey | null,
   account?: AccountInfo<Buffer>
 ): TokenAccount | undefined {
-  if (!account) {
+  if (!account || !pubkey) {
     return undefined;
   }
 
@@ -138,9 +149,9 @@ function wrapNativeAccount(
     info: {
       mint: WRAPPED_SOL_MINT,
       owner: pubkey,
-      amount: new u64(account.lamports),
+      amount: account.lamports,
       delegate: null,
-      delegatedAmount: new u64(0),
+      delegatedAmount: 0,
       isInitialized: true,
       isFrozen: false,
       isNative: true,
@@ -151,26 +162,26 @@ function wrapNativeAccount(
 }
 
 const UseNativeAccount = () => {
-  const connection = useConnection();
-  const { wallet } = useWallet();
+  const {connection} = useConnection();
+  const { wallet, publicKey } = useWallet();
 
   const [nativeAccount, setNativeAccount] = useState<AccountInfo<Buffer>>();
   useEffect(() => {
-    if (!connection || !wallet?.publicKey) {
+    if (!connection || !publicKey) {
       return;
     }
 
-    connection.getAccountInfo(wallet.publicKey).then((acc) => {
+    connection.getAccountInfo(publicKey).then((acc) => {
       if (acc) {
         setNativeAccount(acc);
       }
     });
-    connection.onAccountChange(wallet.publicKey, (acc) => {
+    connection.onAccountChange(publicKey, (acc) => {
       if (acc) {
         setNativeAccount(acc);
       }
     });
-  }, [setNativeAccount, wallet, wallet.publicKey, connection]);
+  }, [setNativeAccount, wallet, publicKey, connection]);
 
   return { nativeAccount };
 };
@@ -193,7 +204,7 @@ const precacheUserTokenAccounts = async (
   });
   accounts.value
     .map((info) => {
-      const data = deserializeAccount(info.account.data);
+      const data = unpackAccount(info.pubkey, info.account); // deserializeAccount(info.account.data);
       // need to query for mint to get decimals
 
       // TODO: move to web3.js for decoding on the client side... maybe with callback
@@ -212,9 +223,9 @@ const precacheUserTokenAccounts = async (
     });
 };
 
-export function AccountsProvider({ children = null as any }) {
-  const connection = useConnection();
-  const { wallet, connected } = useWallet();
+export function AccountsProvider({ children = null }: React.PropsWithChildren) {
+  const {connection} = useConnection();
+  const { wallet, connected, publicKey } = useWallet();
   const [tokenAccounts, setTokenAccounts] = useState<TokenAccount[]>([]);
   const [userAccounts, setUserAccounts] = useState<TokenAccount[]>([]);
   const { nativeAccount } = UseNativeAccount();
@@ -222,27 +233,27 @@ export function AccountsProvider({ children = null as any }) {
 
   const selectUserAccounts = useCallback(() => {
     return [...accountsCache.values()].filter(
-      (a) => a.info.owner.toBase58() === wallet.publicKey.toBase58()
+      (a) => a.info.owner.toBase58() === publicKey?.toBase58()
     );
-  }, [wallet]);
+  }, [ publicKey]);
 
   useEffect(() => {
     setUserAccounts(
       [
-        wrapNativeAccount(wallet.publicKey, nativeAccount),
+        wrapNativeAccount(publicKey, nativeAccount),
         ...tokenAccounts,
       ].filter((a) => a !== undefined) as TokenAccount[]
     );
-  }, [nativeAccount, wallet, tokenAccounts]);
+  }, [nativeAccount, wallet, tokenAccounts, publicKey]);
 
   useEffect(() => {
-    if (!connection || !wallet || !wallet.publicKey) {
+    if (!connection || !wallet || !publicKey) {
       setTokenAccounts([]);
     } else {
       // cache host accounts to avoid query during swap
       precacheUserTokenAccounts(connection, SWAP_HOST_FEE_ADDRESS);
 
-      precacheUserTokenAccounts(connection, wallet.publicKey).then(() => {
+      precacheUserTokenAccounts(connection, publicKey).then(() => {
         setTokenAccounts(selectUserAccounts());
       });
 
@@ -255,7 +266,7 @@ export function AccountsProvider({ children = null as any }) {
           const id = (info.accountId as unknown) as string;
           // TODO: do we need a better way to identify layout (maybe a enum identifing type?)
           if (info.accountInfo.data.length === AccountLayout.span) {
-            const data = deserializeAccount(info.accountInfo.data);
+            const data = unpackAccount(info.accountId, info.accountInfo); //deserializeAccount(info.accountInfo.data);
             // TODO: move to web3.js for decoding on the client side... maybe with callback
             const details = {
               pubkey: new PublicKey((info.accountId as unknown) as string),
@@ -275,8 +286,8 @@ export function AccountsProvider({ children = null as any }) {
             }
           } else if (info.accountInfo.data.length === MintLayout.span) {
             if (mintCache.has(id)) {
-              const data = Buffer.from(info.accountInfo.data);
-              const mint = deserializeMint(data);
+              // const data = Buffer.from(info.accountInfo.data);
+              const mint = unpackMint(new PublicKey((info.accountId as unknown) as string), info.accountInfo); //deserializeMint(data);
               mintCache.set(id, new Promise((resolve) => resolve(mint)));
               accountEmitter.raiseAccountUpdated(id);
             }
@@ -291,7 +302,7 @@ export function AccountsProvider({ children = null as any }) {
         connection.removeProgramAccountChangeListener(tokenSubID);
       };
     }
-  }, [connection, connected, wallet?.publicKey]);
+  }, [connection, connected, publicKey, wallet, selectUserAccounts]);
 
   return (
     <AccountsContext.Provider
@@ -314,8 +325,8 @@ export function useNativeAccount() {
 }
 
 export function useMint(id?: string) {
-  const connection = useConnection();
-  const [mint, setMint] = useState<MintInfo>();
+  const {connection} = useConnection();
+  const [mint, setMint] = useState<Mint>();
 
   useEffect(() => {
     if (!id) {
@@ -358,7 +369,7 @@ export function useUserAccounts() {
 }
 
 export function useAccount(pubKey?: PublicKey) {
-  const connection = useConnection();
+  const {connection} = useConnection();
   const [account, setAccount] = useState<TokenAccount>();
 
   const key = pubKey?.toBase58();
@@ -438,62 +449,62 @@ export const useAccountByMint = (mint: string) => {
 };
 
 // TODO: expose in spl package
-const deserializeAccount = (data: Buffer) => {
-  const accountInfo = AccountLayout.decode(data);
-  accountInfo.mint = new PublicKey(accountInfo.mint);
-  accountInfo.owner = new PublicKey(accountInfo.owner);
-  accountInfo.amount = u64.fromBuffer(accountInfo.amount);
+// const deserializeAccount = (data: Buffer) => {
+//   const accountInfo =  AccountLayout.decode(data);
+//   accountInfo.mint = new PublicKey(accountInfo.mint);
+//   accountInfo.owner = new PublicKey(accountInfo.owner);
+//   accountInfo.amount = u64.fromBuffer(accountInfo.amount);
 
-  if (accountInfo.delegateOption === 0) {
-    accountInfo.delegate = null;
-    accountInfo.delegatedAmount = new u64(0);
-  } else {
-    accountInfo.delegate = new PublicKey(accountInfo.delegate);
-    accountInfo.delegatedAmount = u64.fromBuffer(accountInfo.delegatedAmount);
-  }
+//   if (accountInfo.delegateOption === 0) {
+//     accountInfo.delegate = null;
+//     accountInfo.delegatedAmount = new u64(0);
+//   } else {
+//     accountInfo.delegate = new PublicKey(accountInfo.delegate);
+//     accountInfo.delegatedAmount = u64.fromBuffer(accountInfo.delegatedAmount);
+//   }
 
-  accountInfo.isInitialized = accountInfo.state !== 0;
-  accountInfo.isFrozen = accountInfo.state === 2;
+//   accountInfo.isInitialized = accountInfo.state !== 0;
+//   accountInfo.isFrozen = accountInfo.state === 2;
 
-  if (accountInfo.isNativeOption === 1) {
-    accountInfo.rentExemptReserve = u64.fromBuffer(accountInfo.isNative);
-    accountInfo.isNative = true;
-  } else {
-    accountInfo.rentExemptReserve = null;
-    accountInfo.isNative = false;
-  }
+//   if (accountInfo.isNativeOption === 1) {
+//     accountInfo.rentExemptReserve = u64.fromBuffer(accountInfo.isNative);
+//     accountInfo.isNative = true;
+//   } else {
+//     accountInfo.rentExemptReserve = null;
+//     accountInfo.isNative = false;
+//   }
 
-  if (accountInfo.closeAuthorityOption === 0) {
-    accountInfo.closeAuthority = null;
-  } else {
-    accountInfo.closeAuthority = new PublicKey(accountInfo.closeAuthority);
-  }
+//   if (accountInfo.closeAuthorityOption === 0) {
+//     accountInfo.closeAuthority = null;
+//   } else {
+//     accountInfo.closeAuthority = new PublicKey(accountInfo.closeAuthority);
+//   }
 
-  return accountInfo;
-};
+//   return accountInfo;
+// };
 
 // TODO: expose in spl package
-const deserializeMint = (data: Buffer) => {
-  if (data.length !== MintLayout.span) {
-    throw new Error("Not a valid Mint");
-  }
+// const deserializeMint = (data: Buffer) => {
+//   if (data.length !== MintLayout.span) {
+//     throw new Error("Not a valid Mint");
+//   }
 
-  const mintInfo = MintLayout.decode(data);
+//   const mintInfo = unpackMint() MintLayout.decode(data);
 
-  if (mintInfo.mintAuthorityOption === 0) {
-    mintInfo.mintAuthority = null;
-  } else {
-    mintInfo.mintAuthority = new PublicKey(mintInfo.mintAuthority);
-  }
+//   if (mintInfo.mintAuthorityOption === 0) {
+//     mintInfo.mintAuthority = null;
+//   } else {
+//     mintInfo.mintAuthority = new PublicKey(mintInfo.mintAuthority);
+//   }
 
-  mintInfo.supply = u64.fromBuffer(mintInfo.supply);
-  mintInfo.isInitialized = mintInfo.isInitialized !== 0;
+//   mintInfo.supply = u64.fromBuffer(mintInfo.supply);
+//   mintInfo.isInitialized = mintInfo.isInitialized !== 0;
 
-  if (mintInfo.freezeAuthorityOption === 0) {
-    mintInfo.freezeAuthority = null;
-  } else {
-    mintInfo.freezeAuthority = new PublicKey(mintInfo.freezeAuthority);
-  }
+//   if (mintInfo.freezeAuthorityOption === 0) {
+//     mintInfo.freezeAuthority = null;
+//   } else {
+//     mintInfo.freezeAuthority = new PublicKey(mintInfo.freezeAuthority);
+//   }
 
-  return mintInfo as MintInfo;
-};
+//   return mintInfo as MintInfo;
+// };

@@ -1,11 +1,10 @@
 import { Button, Spin } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  useConnection,
   useConnectionConfig,
   useSlippageConfig,
-} from "../../utils/connection";
-import { useWallet } from "../../utils/wallet";
+} from "../../utils/solana-wallet";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { CurrencyInput } from "../currencyInput";
 import { LoadingOutlined } from "@ant-design/icons";
 import { swap, usePoolForBasket } from "../../utils/pools";
@@ -23,8 +22,9 @@ const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 // Show fee information
 
 export const TradeEntry = () => {
-  const { wallet, connected } = useWallet();
-  const connection = useConnection();
+  const walletContext = useWallet()
+  const { wallet, connected, connect } = walletContext;
+  const {connection} = useConnection();
   const [pendingTx, setPendingTx] = useState(false);
   const { A, B, setLastTypedAccount } = useCurrencyPairState();
   const pool = usePoolForBasket([A?.mintAddress, B?.mintAddress]);
@@ -57,8 +57,10 @@ export const TradeEntry = () => {
           },
         ];
 
-        await swap(connection, wallet, components, slippage, pool);
-      } catch {
+
+        await swap(connection, wallet!, walletContext, components, slippage, pool);
+      } catch (e){
+        console.error(e);
         notify({
           description:
             "Please try again and approve transactions from your wallet",
@@ -76,12 +78,12 @@ export const TradeEntry = () => {
       <div>
         <CurrencyInput
           title="Input"
-          onInputChange={(val: any) => {
-            if (A.amount !== val) {
+          onInputChange={(val: number) => {
+            if (parseFloat(A.amount) !== val) {
               setLastTypedAccount(A.mintAddress);
             }
 
-            A.setAmount(val);
+            A.setAmount(val.toString());
           }}
           amount={A.amount}
           mint={A.mintAddress}
@@ -94,12 +96,12 @@ export const TradeEntry = () => {
         </Button>
         <CurrencyInput
           title="To (Estimate)"
-          onInputChange={(val: any) => {
-            if (B.amount !== val) {
+          onInputChange={(val: number) => {
+            if (parseFloat(B.amount) !== val) {
               setLastTypedAccount(B.mintAddress);
             }
 
-            B.setAmount(val);
+            B.setAmount(val.toString());
           }}
           amount={B.amount}
           mint={B.mintAddress}
@@ -112,7 +114,7 @@ export const TradeEntry = () => {
         className="trade-button"
         type="primary"
         size="large"
-        onClick={connected ? handleSwap : wallet.connect}
+        onClick={connected ? handleSwap : connect}
         style={{ width: "100%" }}
         disabled={
           connected &&

@@ -1,7 +1,8 @@
-import React from "react";
 import { Card, Select } from "antd";
 import { NumericInput } from "../numericInput";
 import {
+  bigintToNumber,
+  numberToBigint,
   getPoolName,
   getTokenName,
   isKnownMint,
@@ -9,11 +10,15 @@ import {
 } from "../../utils/utils";
 import { useUserAccounts, useMint, useCachedPool } from "../../utils/accounts";
 import "./styles.less";
-import { useConnectionConfig } from "../../utils/connection";
+import { ENV } from "../../utils/connection";
 import { PoolIcon, TokenIcon } from "../tokenIcon";
-import PopularTokens from "../../utils/token-list.json";
+import PopularTokens from "../../utils/token-list-new.json";
 import { PublicKey } from "@solana/web3.js";
 import { PoolInfo, TokenAccount } from "../../models";
+import { useAppConfig } from "../../utils/solana-wallet";
+// import { useConnection } from "@solana/wallet-adapter-react";
+// import { getNetworkFromEndpoint, useAppConfig } from "../../utils/solana-wallet";
+// import {getTokensFromNetwork} from '../../utils/tokenManager';
 
 const { Option } = Select;
 
@@ -28,9 +33,10 @@ export const CurrencyInput = (props: {
   const { pools } = useCachedPool();
   const mint = useMint(props.mint);
 
-  const { env } = useConnectionConfig();
-
-  const tokens = PopularTokens[env] as KnownToken[];
+  // const { connection } = useConnection();
+  const {network} = useAppConfig();
+  const env = network.valueOf() as ENV;
+  const tokens = PopularTokens[network.valueOf() as ENV] as KnownToken[];
 
   const renderPopularTokens = tokens.map((item) => {
     return (
@@ -55,7 +61,7 @@ export const CurrencyInput = (props: {
   // group accounts by mint and use one with biggest balance
   const grouppedUserAccounts = userAccounts
     .sort((a, b) => {
-      return b.info.amount.toNumber() - a.info.amount.toNumber();
+      return bigintToNumber(numberToBigint(b.info.amount) - numberToBigint(a.info.amount));
     })
     .reduce((map, acc) => {
       const mint = acc.info.mint.toBase58();
@@ -80,7 +86,7 @@ export const CurrencyInput = (props: {
 
       const account = list[0];
 
-      if (account.account.info.amount.eqn(0)) {
+      if (numberToBigint(account.account.info.amount) === 0n) {
         return undefined;
       }
 
@@ -94,6 +100,7 @@ export const CurrencyInput = (props: {
           .sort();
         icon = <PoolIcon mintA={sorted[0]} mintB={sorted[1]} />;
       } else {
+        
         name = getTokenName(env, mint);
         icon = <TokenIcon mintAddress={mint} />;
       }
@@ -118,8 +125,8 @@ export const CurrencyInput = (props: {
       (a) => a.info.mint.toBase58() === props.mint
     );
     if (currentAccount && mint) {
-      return (
-        currentAccount.info.amount.toNumber() / Math.pow(10, mint.decimals)
+      return bigintToNumber(
+        numberToBigint(currentAccount.info.amount) / numberToBigint(Math.pow(10, mint.decimals))
       );
     }
 
@@ -129,15 +136,15 @@ export const CurrencyInput = (props: {
   return (
     <Card
       className="ccy-input"
+      styles={{body: { padding: 0 }}}
       style={{ borderRadius: 20, margin: 15 }}
-      bodyStyle={{ padding: 0 }}
     >
       <div className="ccy-input-header">
         <div className="ccy-input-header-left">{props.title}</div>
 
         <div
           className="ccy-input-header-right"
-          onClick={(e) =>
+          onClick={() =>
             props.onInputChange && props.onInputChange(userUiBalance())
           }
         >
@@ -147,9 +154,19 @@ export const CurrencyInput = (props: {
       <div className="ccy-input-header" style={{ padding: "0px 10px 5px 7px" }}>
         <NumericInput
           value={props.amount}
-          onChange={(val: any) => {
+          onChange={(val: string| number) => {
             if (props.onInputChange) {
-              props.onInputChange(val);
+              let numToUse;
+              if( typeof val === 'number'){
+                numToUse = val;
+              } else {
+                if(val === ''){
+                  numToUse = 0;
+                } else {
+                  numToUse = parseFloat(val);
+                }
+              }
+              props.onInputChange(numToUse);
             }
           }}
           style={{
@@ -167,7 +184,7 @@ export const CurrencyInput = (props: {
             style={{ minWidth: 80 }}
             placeholder="CCY"
             value={props.mint}
-            dropdownMatchSelectWidth={true}
+            popupMatchSelectWidth ={true}
             dropdownStyle={{ minWidth: 200 }}
             onChange={(item) => {
               if (props.onMintChange) {

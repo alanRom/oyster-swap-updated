@@ -1,9 +1,10 @@
 import { Identicon } from "./../identicon";
 import React from "react";
 import { getTokenIcon } from "../../utils/utils";
-import { useConnectionConfig } from "../../utils/connection";
+import { useConnectionConfig } from "../../utils/solana-wallet";
 
-export const TokenIcon = (props: {
+export const 
+TokenIcon = (props: {
   mintAddress: string;
   style?: React.CSSProperties;
 }) => {

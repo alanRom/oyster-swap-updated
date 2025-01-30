@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { MintInfo } from "@solana/spl-token";
-
-import PopularTokens from "./token-list.json";
+import { getMint, Mint } from "@solana/spl-token";
+import PopularTokens from './token-list-new.json';
 import { ENV } from "./connection";
 import { PoolInfo, TokenAccount } from "./../models";
+import { Connection, PublicKey } from "@solana/web3.js";
 
 export interface KnownToken {
   tokenSymbol: string;
@@ -35,7 +35,7 @@ export function useLocalStorageState(key: string, defaultState?: string) {
   });
 
   const setLocalStorageState = useCallback(
-    (newState) => {
+    (newState: null) => {
       const changed = state !== newState;
       if (!changed) {
         return;
@@ -83,22 +83,33 @@ export function isKnownMint(env: ENV, mintAddress: string) {
   return !!AddressToToken.get(env)?.get(mintAddress);
 }
 
+export async function isValidMint(connection: Connection, mint: PublicKey){
+  try{  
+    const mintInfo = await getMint(connection, mint);
+    const _x = mintInfo.supply;
+    return true;
+  }
+  catch{
+    return false
+  }
+}
+
 export function convert(
   account?: TokenAccount,
-  mint?: MintInfo,
+  mint?: Mint,
   rate: number = 1.0
 ): number {
-  if (!account) {
+  if (!account || account.info.amount === undefined) {
     return 0;
   }
 
   const precision = Math.pow(10, mint?.decimals || 0);
-  return (account.info.amount?.toNumber() / precision) * rate;
+  return bigintToNumber((numberToBigint(account.info.amount) / numberToBigint(precision)) * numberToBigint(rate));
 }
 
 export function formatTokenAmount(
   account?: TokenAccount,
-  mint?: MintInfo,
+  mint?: Mint,
   rate: number = 1.0,
   prefix = "",
   suffix = ""
@@ -108,4 +119,23 @@ export function formatTokenAmount(
   }
 
   return `${[prefix]}${convert(account, mint, rate).toFixed(6)}${suffix}`;
+}
+
+export function bigintToNumber(num: number | bigint){
+  if(typeof num == 'number'){
+    return num;
+  }
+  return Number(num);
+}
+
+export function numberToBigint(num: number | bigint)
+{
+  if(typeof num == 'bigint'){
+    return num;
+  }
+  return BigInt(num).valueOf();
+}
+
+export function getMatchingTypes(num1: bigint|number, num2: bigint|number){
+
 }

@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import { addLiquidity, usePoolForBasket } from "../../utils/pools";
 import { Button, Dropdown, Popover } from "antd";
-import { useWallet } from "../../utils/wallet";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import {
-  useConnection,
   useConnectionConfig,
   useSlippageConfig,
-} from "../../utils/connection";
+} from "../../utils/solana-wallet";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import { notify } from "../../utils/notifications";
@@ -26,8 +25,9 @@ import {
 const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
 
 export const AddToLiquidity = () => {
-  const { wallet, connected } = useWallet();
-  const connection = useConnection();
+  const walletContext = useWallet();
+  const { wallet, connected} = walletContext;
+  const {connection} = useConnection();
   const [pendingTx, setPendingTx] = useState(false);
   const { A, B, setLastTypedAccount } = useCurrencyPairState();
   const pool = usePoolForBasket([A?.mintAddress, B?.mintAddress]);
@@ -43,8 +43,8 @@ export const AddToLiquidity = () => {
     ownerWithdrawFeeDenominator: DEFAULT_DENOMINATOR,
   });
 
-  const executeAction = !connected
-    ? wallet.connect
+  const executeAction = !connected && wallet
+    ? wallet?.adapter.connect
     : async () => {
       if (A.account && B.account && A.mint && B.mint) {
         setPendingTx(true);
@@ -61,7 +61,7 @@ export const AddToLiquidity = () => {
           },
         ];
 
-        addLiquidity(connection, wallet, components, slippage, pool, options)
+        addLiquidity(connection, wallet!, walletContext, components, slippage, pool, options)
           .then(() => {
             setPendingTx(false);
           })
@@ -128,11 +128,11 @@ export const AddToLiquidity = () => {
 
       <CurrencyInput
         title="Input"
-        onInputChange={(val: any) => {
-          if (A.amount !== val) {
+        onInputChange={(val: number) => {
+          if (A.amount !== val.toString()) {
             setLastTypedAccount(A.mintAddress);
           }
-          A.setAmount(val);
+          A.setAmount(val.toString());
         }}
         amount={A.amount}
         mint={A.mintAddress}
@@ -143,12 +143,12 @@ export const AddToLiquidity = () => {
       <div>+</div>
       <CurrencyInput
         title="Input"
-        onInputChange={(val: any) => {
-          if (B.amount !== val) {
+        onInputChange={(val: number) => {
+          if (parseFloat(B.amount) !== val) {
             setLastTypedAccount(B.mintAddress);
           }
 
-          B.setAmount(val);
+          B.setAmount(val.toString());
         }}
         amount={B.amount}
         mint={B.mintAddress}
