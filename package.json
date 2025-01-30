@@ -1,73 +1,44 @@
 {
-  "name": "token-swap-ui",
-  "version": "0.1.0",
+  "name": "oysterswap-updated",
   "private": true,
-  "dependencies": {
-    "@craco/craco": "^5.7.0",
-    "@project-serum/serum": "^0.13.7",
-    "@project-serum/sol-wallet-adapter": "^0.1.1",
-    "@solana/spl-token": "0.0.11",
-    "@solana/spl-token-swap": "0.0.2",
-    "@solana/web3.js": "^0.78.2",
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.5.0",
-    "@testing-library/user-event": "^7.2.1",
-    "@types/react-router-dom": "^5.1.6",
-    "antd": "^4.6.6",
-    "bn.js": "^5.1.3",
-    "bs58": "^4.0.1",
-    "buffer-layout": "^1.2.0",
-    "craco-less": "^1.17.0",
-    "identicon.js": "^2.3.3",
-    "jazzicon": "^1.5.0",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-github-btn": "^1.2.0",
-    "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.3",
-    "recharts": "^1.8.5",
-    "typescript": "^4.0.0"
-  },
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject",
-    "localnet:update": "solana-localnet update",
-    "localnet:up": "rm client/util/store/config.json; set -x; solana-localnet down; set -e; solana-localnet up",
-    "localnet:down": "solana-localnet down",
-    "localnet:logs": "solana-localnet logs -f",
-    "predeploy": "git pull --ff-only && yarn && yarn build",
-    "deploy": "gh-pages -d build",
-    "deploy:ar": "arweave deploy-dir build --key-file "
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
-  "eslintConfig": {
-    "extends": "react-app"
+  "dependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@project-serum/serum": "^0.13.65",
+    "@project-serum/sol-wallet-adapter": "^0.2.6",
+    "@solana/spl-token": "^0.4.8",
+    "@solana/spl-token-swap": "^0.4.3",
+    "@solana/wallet-adapter-ant-design": "^0.11.32",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/web3.js": "^1.95.0",
+    "antd": "^5.19.2",
+    "jazzicon": "^1.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "homepage": ".",
   "devDependencies": {
-    "@types/bn.js": "^4.11.6",
-    "@types/bs58": "^4.0.1",
-    "@types/identicon.js": "^2.3.0",
-    "@types/jest": "^24.9.1",
-    "@types/node": "^12.12.62",
-    "@types/react": "^16.9.50",
-    "@types/react-dom": "^16.9.8",
-    "@types/recharts": "^1.8.16",
-    "arweave-deploy": "^1.9.1",
-    "gh-pages": "^3.1.0",
-    "prettier": "^2.1.2"
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.7",
+    "less": "^4.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.4",
+    "vite-plugin-node-polyfills": "^0.22.0"
   }
 }
